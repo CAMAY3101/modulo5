@@ -1,0 +1,125 @@
+---
+title: 'Momento de Retroalimentación: Módulo 5 Procesamiento de datos multivariados
+  (Portafolio Implementación)'
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r echo=FALSE}
+df=read.csv("mercurio.csv")
+```
+
+Significado de variables 
+
+  - X1 = número de indentificación
+  - X2 = nombre del lago
+  - X3 = alcalinidad (mg/l de carbonato de calcio)
+  - X4 = PH
+  - X5 = calcio (mg/l)
+  - X6 = clorofila (mg/l)
+  - X7 = concentración media de mercurio (parte por millón) en el tejido muscualar del grupo de peces estudiados en cada lago
+  - X8 = número de peces estudiados en el lago
+  - X9 = mínimo de la concentración de mercurio en cada grupo de peces
+  - X10 = máximo de la concentración de mercurio en cada grupo de peces
+  - X11 = estimacion (mediante regresión) de la concentración de mercurio en el pez de 3 años (o promedio de mercurio cuando la edad no está disponible)
+  - X12 = indicador de la edad de los peces (0: jóvenes; 1: maduros)
+
+```{r echo=FALSE}
+df_cual = df[,c(1,2,12)]
+df_cuan = df[,c(-1,-2, -12)]
+```
+
+## 1)Realice un análisis de normalidad de las variables continuas para identificar variables normales. Tome en cuenta los puntos que se sugieren a continuación (no son exhaustivos):
+
+###A) Realice la prueba de normalidad de Mardia y la prueba de Anderson Darling para identificar las variables que son normales y detectar posible normalidad multivariada de grupos de variables.
+
+```{r echo=FALSE}
+library("MVN")
+print("------------MARDIA----------")
+mvn(df_cuan,subset = NULL,mvn = "mardia", covariance = FALSE,showOutliers = FALSE)
+```
+
+```{r echo=FALSE}
+library("MVN")
+print("------------ ANDERSON DARLING----------")
+mvn(df_cuan,subset = NULL,univariateTest = "AD", covariance = FALSE,showOutliers = FALSE)
+```
+El test de Mardia arroja que el sesgo multivariado es de 410 y para la curtosis multivariada 4.5.
+
+Mientras que el test de Anderson-Darling nos arroja que x4 y x10 son las variables que siguen una distribución normal.
+
+
+###B) Realiza la prueba de Mardia y Anderson Darling de las variables que sí tuvieron normalidad en los incisos anteriores. Interpreta los resultados obtenidos con base en ambas pruebas y en la interpretación del sesgo y la curtosis de cada una de ellas.
+
+```{r echo=FALSE}
+library(MVN)
+df_norm = df[,c(4,10)]
+print("------------MARDIA PARA VARIABLES X4 Y X10----------")
+mvn(df_norm,subset = NULL,mvn = "mardia", covariance = FALSE,showOutliers = FALSE)
+```
+```{r echo=FALSE}
+print("------------ ANDERSON DARLING PARA VARIABLES X4 Y X10----------")
+mvn(df_norm,subset = NULL,univariateTest = "AD", covariance = FALSE,showOutliers = FALSE)
+```
+Tomando en cuenta que la distribución se encuentra sesgada a la derecha y por la curtosis, se puede considar que la distribución esta normalizada.
+
+###C) Haz la gráfica de contorno de la normal multivariada obtenida en el inciso B.
+
+```{r echo=FALSE}
+test2 = mvn(df[,c(4,10)], mvnTest = "mardia", multivariatePlot = "contour")
+```	
+
+###D) Detecta datos atípicos o influyentes en la normal multivariada encontrada en el inciso B (auxíliate de la distancia de Mahalanobis y del gráfico QQplot multivariado)
+
+```{r echo = FALSE}
+library(MVN)
+p = 2
+# Vector de medias
+X = colMeans(df_norm)
+#Matriz de covarianza
+S = cov(df_norm)
+
+#Distancia de Mahalanobis
+d2M =  mahalanobis(df_norm,X,S)
+
+
+#Multinormalidad Test gráfico Q-Q Plot
+plot(qchisq(((1:nrow(df_norm)) - 1/2)/nrow(df_norm),df=p),sort( d2M ), main = "Q-Q Plot", xlab = "sort( d2M )" , ylab = "Squared Malahanobis distance")
+abline(a=0, b=1,col="blue")
+```
+Con la distancia de Malanobis, podemos notar que los puntos a la derecha forman una curva hacia abajo, lo cual nos indica la posibilidad de datos atipos, que influirian en la distribución normal multivariada.
+
+# 2) Realice un análisis de componentes principales con la base de datos completa para identificar los factores principales que intervienen en el problema de la contaminación por mercurio de los peces en agua dulce. Tome en cuenta los puntos que se sugieren a continuación (no son exhaustivos):
+
+###A) Justifique por qué es adecuado el uso de componentes principales para analizar la base (haz uso de la matriz de correlaciones)
+
+```{r echo=FALSE}
+cor = cor(df_cuan) # matriz de correlaciones 
+
+print("----matriz de correlaciones----")
+print(cor)
+
+```
+En la matriz se puede observar que existe correlación entre las variables pero en la mayoria de los datos los valores estan en numeros negativos, lo que nos dice que hay redundancia en los datos. 
+
+###B) Realiza el análisis de componentes principales y justifica el número de componentes principales apropiados para reducir la dimensión de la base
+
+```{r echo=FALSE}
+cpa = prcomp(df_cuan , scale=FALSE)
+cpa
+```
+
+```{r echo=FALSE}
+summary(cpa)
+```
+Con el analisis de componentes, podemos asumir que los primeros seis explican el 99.99% de la varianza total, se requieren para la reducción de dimesión de la base. 
+
+###C) Representa en un gráfico los vectores asociados a las variables y las puntuaciones de las observaciones de las dos primeras componentes
+
+```{r echo=FALSE}
+library(ggfortify)
+autoplot(cpa, colour="lightsalmon", loadings = TRUE)
+
+```
+

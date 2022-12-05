@@ -1,0 +1,118 @@
+---
+title: "Reporte final de Venta de televisores"
+author: "Aylin Camacho Reyes"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r echo=FALSE}
+ventas = c(4.8,4.1,6.0,6.5,5.8,5.2,6.8,7.4,6.0,5.6,7.5,7.8,6.3,5.9,8.0,8.4)
+time = 1:16
+```
+
+```{r echo=FALSE}
+plot(time, ventas, type = "o", col= "blue", main = "VENTAS POR TRIMESTE", lwd = 2)
+```
+### Análisis de tendencia y estacionalidad
+
+```{r echo=FALSE}
+n = lm(ventas~time)
+plot(time, ventas, type = "l", col = "red", lwd = 2)
+abline(n, col = "blue")
+```
+```{r echo=FALSE}
+summary(n)
+```
+## Descompón la serie en sus 3 componentes
+```{r echo=FALSE}
+library(forecast)
+ts_v = ts(ventas, frequency = 4, start(c(2016,1)))
+plot.ts(ts_v)
+```
+```{r echo=FALSE}
+T = decompose(ts_v)
+plot(T, col = "lightblue", lwd = 2)
+```
+
+```{r echo=FALSE}
+library(wesanderson)
+ggseasonplot(
+  ts_v,
+  season.labels = NULL,
+  year.labels =  TRUE,
+  year.labels.left = FALSE,
+  type = NULL,
+  pal = "Royal2",
+  main = "Variación Estacional",
+  continuous = FALSE,
+  polar = FALSE
+)
+```
+
+## Analizar modelo lineal de tendencia
+
+```{r echo=FALSE}
+ventas_desestacionalizadas = (T$x)-(T$seasonal)
+xt = 1:16
+yt = ventas_desestacionalizadas
+Nt = lm(yt~xt)
+Nt
+```
+
+```{r echo=FALSE}
+plot(xt, yt, type="l", lwd = 2, main = "Ventas Desestacionalizadas")
+abline(Nt, col="red", lwd=2)
+```
+```{r echo=FALSE}
+summary(Nt)
+```
+
+```{r echo=FALSE}
+anova(Nt)
+```
+
+# Análisis de residuos
+
+```{r echo=FALSE}
+res <- resid(Nt)
+plot(fitted(Nt), res, main = "Residuos")
+abline(0,0)
+```
+
+```{r echo=FALSE}
+qqnorm(res)
+qqline(res)
+```
+
+```{r echo=FALSE}
+library(MLmetrics)
+ypreds = predict(lm(yt~xt))
+
+CME=mean(res^2)
+CME
+EPAM = MAPE(ypreds, ventas)
+EPAM
+```
+
+
+### Dibuja el gráfico de los valores de las ventas y las predicciones vs el tiempo
+```{r echo=FALSE}
+
+
+plot(time, ventas, type="o", col="blue", xlab = "time", ylab = "veentas")
+par(new = TRUE)
+lines(time, ypreds, type = "o", col ="lightcoral")
+```
+```{r}
+f = function(x) {5.13917 + 0.14613*x}
+# Índices estacionales son: 
+a1 = T$seasonal[1]
+a2 =T$seasonal[2]
+a3 = T$seasonal[3]
+a4 = T$seasonal[4];
+f(17)*a1*1000
+f(18)*a2*1000
+f(19)*a3*1000
+f(20)*a4*1000
+```
